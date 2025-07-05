@@ -12,13 +12,21 @@ interface ParticleSystemProps {
     intensity: number
     color: THREE.Color
   }>
+  dragState?: {
+    isDragging: boolean
+    startPosition: THREE.Vector3
+    currentPosition: THREE.Vector3
+    velocity: THREE.Vector3
+    intensity: number
+  }
 }
 
-function ParticleSystem({ mousePosition, audioData, sensitivity, ripples = [] }: ParticleSystemProps) {
+function ParticleSystem({ mousePosition, audioData, sensitivity, ripples = [], dragState }: ParticleSystemProps) {
   const particlesRef = useRef<THREE.Points>(null)
   const particleCount = 5000
   const smoothMousePosition = useRef(new THREE.Vector3())
   const mouseVelocity = useRef(new THREE.Vector3())
+  const particleVelocities = useRef(new Float32Array(particleCount * 3))
   
   const { positions, colors, sizes, baseColors, baseSizes } = useMemo(() => {
     const positions = new Float32Array(particleCount * 3)
@@ -30,8 +38,15 @@ function ParticleSystem({ mousePosition, audioData, sensitivity, ripples = [] }:
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3
       
-      // Random positions in a larger sphere for more space-like distribution
-      const radius = 80 + Math.random() * 40
+      // Random positions with some concentrated near center
+      let radius
+      if (Math.random() < 0.3) {
+        // 30% of particles start closer to center
+        radius = 20 + Math.random() * 30
+      } else {
+        // Rest are distributed further out
+        radius = 50 + Math.random() * 70
+      }
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(Math.random() * 2 - 1)
       
@@ -73,9 +88,10 @@ function ParticleSystem({ mousePosition, audioData, sensitivity, ripples = [] }:
   useFrame((state) => {
     if (!particlesRef.current) return
     
-    // Smooth mouse movement
-    mouseVelocity.current.subVectors(mousePosition, smoothMousePosition.current)
-    smoothMousePosition.current.lerp(mousePosition, 0.1)
+    // Smooth mouse movement with stronger smoothing
+    const newVelocity = new THREE.Vector3().subVectors(mousePosition, smoothMousePosition.current)
+    mouseVelocity.current.lerp(newVelocity, 0.3)
+    smoothMousePosition.current.lerp(mousePosition, 0.2)
     
     const time = state.clock.getElapsedTime()
     const geometry = particlesRef.current.geometry
@@ -172,36 +188,108 @@ function ParticleSystem({ mousePosition, audioData, sensitivity, ripples = [] }:
         colors[i3 + 2] = Math.min(1, colors[i3 + 2] * (1 - rippleEffect * 0.5) + rippleColorB * rippleEffect)
       }
       
-      // Dynamic mouse attraction/repulsion
-      if (distance < 25) {
+      // Enhanced mouse following behavior
+      const followRadius = 50
+      const followInfluence = Math.max(0, 1 - distance / followRadius)
+      
+      if (followInfluence > 0) {
+        // Calculate direction to mouse
+        const dirX = -dx / distance
+        const dirY = -dy / distance
+        const dirZ = -dz / distance
         
-        // Particles within inner radius are attracted
-        if (distance > 5 && distance < 15) {
-          const attractForce = (1 - Math.abs(distance - 10) / 5) * 0.03
-          positions[i3] -= dx * attractForce
-          positions[i3 + 1] -= dy * attractForce
-          positions[i3 + 2] -= dz * attractForce
-        }
-        // Very close particles are repelled
-        else if (distance < 5) {
-          const repelForce = (1 - distance / 5) * 0.05
+        // Flow field effect - create smooth following motion
+        const flowForce = followInfluence * 0.08
+        const dampening = 0.95
+        
+        // Update particle velocities
+        particleVelocities.current[i3] = particleVelocities.current[i3] * dampening + dirX * flowForce
+        particleVelocities.current[i3 + 1] = particleVelocities.current[i3 + 1] * dampening + dirY * flowForce
+        particleVelocities.current[i3 + 2] = particleVelocities.current[i3 + 2] * dampening + dirZ * flowForce
+        
+        // Apply velocities to positions
+        positions[i3] += particleVelocities.current[i3]
+        positions[i3 + 1] += particleVelocities.current[i3 + 1]
+        positions[i3 + 2] += particleVelocities.current[i3 + 2]
+        
+        // Add orbital motion for more dynamic movement
+        const orbitAngle = time * 2 + i * 0.1
+        const orbitForce = followInfluence * 0.03
+        positions[i3] += Math.cos(orbitAngle) * dy * orbitForce
+        positions[i3 + 1] += Math.sin(orbitAngle) * dx * orbitForce
+        
+        // Mouse velocity creates wake effect
+        const wakeForce = followInfluence * 0.3
+        positions[i3] += mouseVelocity.current.x * wakeForce
+        positions[i3 + 1] += mouseVelocity.current.y * wakeForce
+        positions[i3 + 2] += mouseVelocity.current.z * wakeForce
+        
+        // Repel very close particles to avoid clustering
+        if (distance < 8) {
+          const repelForce = (1 - distance / 8) * 0.1
           positions[i3] += dx * repelForce
           positions[i3 + 1] += dy * repelForce
           positions[i3 + 2] += dz * repelForce
         }
+      } else {
+        // Gradually reduce velocity when out of range
+        particleVelocities.current[i3] *= 0.98
+        particleVelocities.current[i3 + 1] *= 0.98
+        particleVelocities.current[i3 + 2] *= 0.98
         
-        // Add swirl motion around mouse
-        const tangentX = -dy
-        const tangentY = dx
-        const swirlForce = spotlightIntensity * 0.02
-        positions[i3] += tangentX * swirlForce
-        positions[i3 + 1] += tangentY * swirlForce
+        positions[i3] += particleVelocities.current[i3]
+        positions[i3 + 1] += particleVelocities.current[i3 + 1]
+        positions[i3 + 2] += particleVelocities.current[i3 + 2]
+      }
+      
+      // Apply drag effects
+      if (dragState && dragState.isDragging) {
+        const dragDistance = Math.sqrt(
+          Math.pow(positions[i3] - dragState.currentPosition.x, 2) +
+          Math.pow(positions[i3 + 1] - dragState.currentPosition.y, 2) +
+          Math.pow(positions[i3 + 2] - dragState.currentPosition.z, 2)
+        )
         
-        // Add mouse velocity influence for trailing effect
-        const velocityInfluence = spotlightIntensity * 0.5
-        positions[i3] += mouseVelocity.current.x * velocityInfluence
-        positions[i3 + 1] += mouseVelocity.current.y * velocityInfluence
-        positions[i3 + 2] += mouseVelocity.current.z * velocityInfluence
+        const dragRadius = 40
+        const dragInfluence = Math.max(0, 1 - dragDistance / dragRadius) * dragState.intensity
+        
+        if (dragInfluence > 0) {
+          // Create vortex/swirl effect
+          const toCenter = new THREE.Vector3(
+            dragState.currentPosition.x - positions[i3],
+            dragState.currentPosition.y - positions[i3 + 1],
+            dragState.currentPosition.z - positions[i3 + 2]
+          ).normalize()
+          
+          // Perpendicular vector for circular motion
+          const perpX = -toCenter.y
+          const perpY = toCenter.x
+          
+          // Combine attraction and circular motion
+          const attractForce = dragInfluence * 0.1
+          const swirlForce = dragInfluence * 0.15
+          
+          positions[i3] += toCenter.x * attractForce + perpX * swirlForce
+          positions[i3 + 1] += toCenter.y * attractForce + perpY * swirlForce
+          positions[i3 + 2] += toCenter.z * attractForce
+          
+          // Add drag velocity influence
+          if (dragState.velocity) {
+            positions[i3] += dragState.velocity.x * dragInfluence * 0.02
+            positions[i3 + 1] += dragState.velocity.y * dragInfluence * 0.02
+            positions[i3 + 2] += dragState.velocity.z * dragInfluence * 0.02
+          }
+          
+          // Enhance size and color during drag
+          sizes[i] *= (1 + dragInfluence * 2)
+          
+          // Shift colors to rainbow effect
+          const rainbowHue = (time * 2 + dragDistance * 0.1) % 1
+          const dragColor = new THREE.Color().setHSL(rainbowHue, 0.8, 0.6)
+          colors[i3] = Math.min(1, colors[i3] * (1 - dragInfluence * 0.7) + dragColor.r * dragInfluence)
+          colors[i3 + 1] = Math.min(1, colors[i3 + 1] * (1 - dragInfluence * 0.7) + dragColor.g * dragInfluence)
+          colors[i3 + 2] = Math.min(1, colors[i3 + 2] * (1 - dragInfluence * 0.7) + dragColor.b * dragInfluence)
+        }
       }
       
       // Audio reactivity

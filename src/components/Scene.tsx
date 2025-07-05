@@ -5,7 +5,10 @@ import StarBurst from './StarBurst'
 import ParticleSystem from './ParticleSystem'
 import GlowLayer from './GlowLayer'
 import { RippleEffect, type Ripple } from './RippleEffect'
+import { DragEffect, type DragState } from './DragEffect'
+import DragParticles from './DragParticles'
 import MouseTrail from './MouseTrail'
+import MagneticField from './MagneticField'
 import AudioVisualizer from './AudioVisualizer'
 import MouseInteraction from './MouseInteraction'
 
@@ -24,6 +27,13 @@ function Scene({ appState }: SceneProps) {
   const [audioData, setAudioData] = useState<Float32Array | null>(null)
   const [mousePosition, setMousePosition] = useState(new THREE.Vector3())
   const [ripples, setRipples] = useState<Ripple[]>([])
+  const [dragState, setDragState] = useState<DragState>({
+    isDragging: false,
+    startPosition: new THREE.Vector3(),
+    currentPosition: new THREE.Vector3(),
+    velocity: new THREE.Vector3(),
+    intensity: 0
+  })
   const groupRef = useRef<THREE.Group>(null)
 
   useEffect(() => {
@@ -89,13 +99,27 @@ function Scene({ appState }: SceneProps) {
   return (
     <>
       <group ref={groupRef}>
+        <DragEffect 
+          mousePosition={mousePosition}
+          onDragStateChange={setDragState}
+        />
+        
         <RippleEffect 
           mousePosition={mousePosition}
           onRipplesUpdate={setRipples}
+          dragState={dragState}
         />
         
         <MouseTrail 
           mousePosition={mousePosition}
+        />
+        
+        <MagneticField 
+          mousePosition={mousePosition}
+        />
+        
+        <DragParticles 
+          dragState={dragState}
         />
         
         <StarBurst 
@@ -125,6 +149,7 @@ function Scene({ appState }: SceneProps) {
               audioData={audioData}
               sensitivity={appState.audioSensitivity}
               ripples={ripples}
+              dragState={dragState}
             />
           </>
         )}

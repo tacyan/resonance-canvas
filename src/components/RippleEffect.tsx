@@ -15,9 +15,13 @@ interface Ripple {
 interface RippleEffectProps {
   mousePosition: THREE.Vector3
   onRipplesUpdate: (ripples: Ripple[]) => void
+  dragState?: {
+    isDragging: boolean
+    intensity: number
+  }
 }
 
-function RippleEffect({ mousePosition, onRipplesUpdate }: RippleEffectProps) {
+function RippleEffect({ mousePosition, onRipplesUpdate, dragState }: RippleEffectProps) {
   const { raycaster, camera, scene } = useThree()
   const [ripples, setRipples] = useState<Ripple[]>([])
   const lastMousePos = useRef(new THREE.Vector3())
@@ -88,6 +92,21 @@ function RippleEffect({ mousePosition, onRipplesUpdate }: RippleEffectProps) {
       }
       
       setRipples(prev => [...prev, newRipple])
+    }
+    
+    // Create continuous ripples during drag
+    if (dragState && dragState.isDragging && Math.random() < 0.8) {
+      const dragRipple: Ripple = {
+        id: Date.now().toString() + Math.random(),
+        position: mousePosition.clone(),
+        radius: 0,
+        maxRadius: 50,
+        intensity: dragState.intensity,
+        color: new THREE.Color().setHSL(Math.random(), 0.8, 0.6),
+        speed: 1.2
+      }
+      
+      setRipples(prev => [...prev, dragRipple])
     }
     
     lastMousePos.current.copy(mousePosition)
