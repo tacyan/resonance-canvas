@@ -1,0 +1,12 @@
+.app {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  background: #000;
+}
+
+.app canvas {
+  width: 100% !important;
+  height: 100% !important;
+  cursor: crosshair;
+}

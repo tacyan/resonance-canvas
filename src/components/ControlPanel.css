@@ -1,0 +1,158 @@
+.control-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 250px;
+  color: #fff;
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.control-panel h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.control-section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.control-section h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.control-section label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.control-section label:hover {
+  color: #4af;
+}
+
+.control-section input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.control-section select {
+  width: 100%;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.control-section select:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #4af;
+}
+
+.control-section select:focus {
+  outline: none;
+  border-color: #4af;
+  box-shadow: 0 0 0 2px rgba(68, 170, 255, 0.2);
+}
+
+.control-section select option {
+  background: #222;
+  color: #fff;
+}
+
+.control-section input[type="range"] {
+  width: 70%;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.control-section input[type="range"]::-webkit-slider-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.control-section input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #4af;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.control-section input[type="range"]::-webkit-slider-thumb:hover {
+  background: #6cf;
+  transform: scale(1.2);
+}
+
+.control-section span {
+  color: #4af;
+  font-weight: bold;
+}
+
+.instructions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.instructions li {
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+  color: #aaa;
+  font-size: 12px;
+}
+
+.instructions li:before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #4af;
+}
+
+@media (max-width: 768px) {
+  .control-panel {
+    top: 10px;
+    right: 10px;
+    min-width: 200px;
+    padding: 15px;
+  }
+  
+  .control-panel h3 {
+    font-size: 16px;
+  }
+  
+  .control-section h4 {
+    font-size: 12px;
+  }
+}
